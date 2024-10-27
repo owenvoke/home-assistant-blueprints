@@ -1,0 +1,124 @@
+blueprint:
+  name: Basic Smart Plug Media Lighting
+  description: Turn smart plug lights on or off based on media player events.
+  domain: automation
+  input:
+    device_settings:
+      name: "Device Settings *"
+      icon: mdi:television
+      input:
+        device_settings_media_player:
+          name: "Media Player *"
+          description: |
+            This is the media player that should trigger the smart lights to be turned on or off.
+          default: [ ]
+          selector:
+            entity:
+              domain: media_player
+        device_settings_light_switch:
+          name: "Smart Plug (Lights) *"
+          description: |
+            This is the smart light plug that should be turned on or off.
+          default: [ ]
+          selector:
+            entity:
+              domain: switch
+        device_settings_tv_switch:
+          name: "Smart Plug (TV)"
+          description: |
+            If provided, this smart plug will be turned on automatically when the media player is turned on.
+          default: [ ]
+          selector:
+            entity:
+              domain: switch
+    time_settings:
+      name: "Time Settings"
+      icon: mdi:clock
+      input:
+        time_settings_only_after_enabled:
+          name: "Enable 'Only After Time'"
+          description: >
+            Only trigger after the specified time.
+          default: true
+          selector:
+            boolean:
+        time_settings_only_after_time:
+          name: "Only After Time"
+          description: >
+            The time that the automation should be triggered after.
+          default: 17:00:00
+          selector:
+            time:
+    advanced_settings:
+      name: "Advanced Settings"
+      icon: mdi:cog
+      collapsed: true
+      input:
+        advanced_settings_turn_off_tv:
+          name: "Turn off TV"
+          description: >
+            Turn off the TV when the media player is turned off.
+          default: false
+          selector:
+            boolean:
+
+variables:
+  device_settings_media_player: !input device_settings_media_player
+  device_settings_light_switch: !input device_settings_light_switch
+  device_settings_tv_switch: !input device_settings_tv_switch
+  time_settings_only_after_enabled: !input time_settings_only_after_enabled
+  time_settings_only_after_time: !input time_settings_only_after_time
+  advanced_settings_turn_off_tv: !input advanced_settings_turn_off_tv
+
+triggers:
+  - entity_id: !input device_settings_media_player
+    from: "off"
+    to: "on"
+    trigger: state
+    id: media_player_turned_on
+  - entity_id: !input device_settings_media_player
+    from: "on"
+    to: "off"
+    trigger: state
+    id: media_player_turned_off
+
+conditions:
+  - condition: and
+    enabled: !input time_settings_only_after_enabled
+    conditions:
+      - condition: time
+        after: !input time_settings_only_after_time
+        before: sensor.sun_next_rising
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - media_player_turned_on
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: !input device_settings_light_switch
+          - choose:
+              - conditions: "{{ device_settings_tv_switch != [] }}"
+                sequence:
+                  - action: switch.turn_on
+                    target:
+                      entity_id: !input device_settings_tv_switch
+      - conditions:
+          - condition: trigger
+            id:
+              - media_player_turned_off
+        sequence:
+          - action: switch.turn_off
+            target:
+              entity_id: !input device_settings_light_switch
+          - choose:
+              - conditions: "{{ advanced_settings_turn_off_tv and (device_settings_tv_switch != []) }}"
+                sequence:
+                  - action: switch.turn_off
+                    target:
+                      entity_id: !input device_settings_tv_switch
+
+mode: single
