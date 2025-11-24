@@ -1,8 +1,14 @@
 blueprint:
   name: Basic Smart Plug Media Lighting
-  description: Turn smart plug lights on or off based on media player events.
+  description: >
+    # Basic Smart Plug Media Lighting
+
+    **Version: 1.0.0**
+
+    Turn smart plug lights on or off based on media player events.
   domain: automation
   input:
+
     device_settings:
       name: "Device Settings *"
       icon: mdi:television
@@ -31,6 +37,7 @@ blueprint:
           selector:
             entity:
               domain: switch
+
     time_settings:
       name: "Time Settings"
       icon: mdi:clock
@@ -46,9 +53,10 @@ blueprint:
           name: "Only After Time"
           description: >
             The time that the automation should be triggered after.
-          default: 17:00:00
+          default: '17:00:00'
           selector:
             time:
+
     advanced_settings:
       name: "Advanced Settings"
       icon: mdi:cog
