@@ -1,0 +1,103 @@
+blueprint:
+  name: Update Spoolman from Bambu Lab
+  description: >
+    # Update Spoolman from Bambu Lab
+
+    **Version: 1.0.0**
+
+    Updates Spoolman entries for Bambu Lab filaments based on AMS tray usage.
+  domain: automation
+
+  input:
+
+    printer_device:
+      name: Bambu Lab Printer
+      description: The Bambu Lab Printer to monitor.
+      selector:
+        device:
+          integration: bambu_lab
+
+    ams_device:
+      name: Bambu Lab AMS
+      description: The Bambu Lab AMS device that is in use.
+      selector:
+        device:
+          integration: bambu_lab
+
+    weight_sensor:
+      name: Bambu Lab print weight sensor
+      description: The sensor that exposes per-tray filament used for the current print.
+      selector:
+        entity:
+          integration: bambu_lab
+          domain: sensor
+          device_class: weight
+
+    spoolman_device:
+      name: Spoolman device
+      description: The Spoolman device that holds the spool entities.
+      selector:
+        device:
+          integration: spoolman
+
+    rfid_tag_attribute:
+      name: RFID Tag Attribute
+      description: The attribute name of the RFID tag from the Spoolman integration.
+      default: extra_rfid_tag
+
+    delay_seconds:
+      name: Delay length (seconds)
+      description: The amount of seconds to wait before sending the updated data to Spoolman.
+      default: 5
+      selector:
+        number:
+          unit_of_measurement: seconds
+
+trigger:
+  - platform: device
+    device_id: !input printer_device
+    domain: bambu_lab
+    type: event_print_finished
+
+action:
+  - variables:
+      ams_device_id: !input ams_device
+      ams_trays: |
+        {{ device_entities(ams_device_id)
+         | select('match', 'sensor.*_tray_*')
+         | list }}
+      delay_seconds: !input delay_seconds
+      printer_device_id: !input printer_device
+      rfid_tag_attribute: !input rfid_tag_attribute
+      spoolman_device_id: !input spoolman_device
+      weight_sensor: !input weight_sensor
+  - delay: '{{ delay_seconds }}'
+  - repeat:
+      for_each: '{{ ams_trays }}'
+      sequence:
+        - variables:
+            current_tray_sensor: "{{ repeat.item }}"
+            slot_number: "{{ repeat.item.split('_')[-1] }}"
+            weight_attribute_name: "AMS 1 Tray {{ slot_number }}"
+            filament_used_this_print: "{{ state_attr(weight_sensor, weight_attribute_name) | float(0) }}"
+            tag_uid: "{{ state_attr(current_tray_sensor, 'tag_uid') }}"
+            matching_entity: >-
+              {% set ns = namespace(entity=none) %}
+              {% for spool_entity in device_entities(spoolman_device_id) %}
+                {% if tag_uid | string == state_attr(spool_entity, rfid_tag_attribute) | string %}
+                  {% set ns.entity = spool_entity %}
+                  {% break %}
+                {% endif %}
+              {% endfor %}
+              {{ ns.entity }}
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ filament_used_this_print > 0 }}"
+                - condition: template
+                  value_template: "{{ matching_entity != none }}"
+              sequence:
+                - action: spoolman.use_spool_filament
+                  data:
+                    id: "{{ state_attr(matching_entity, 'id') }}"
+                    use_weight: "{{ filament_used_this_print }}"
