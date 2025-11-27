@@ -3,7 +3,7 @@ blueprint:
   description: >
     # Update Spoolman from Bambu Lab
 
-    **Version: 1.0.0**
+    **Version: 2.0.0**
 
     Updates Spoolman entries for Bambu Lab filaments based on AMS tray usage.
   domain: automation
@@ -33,13 +33,6 @@ blueprint:
           domain: sensor
           device_class: weight
 
-    spoolman_device:
-      name: Spoolman device
-      description: The Spoolman device that holds the spool entities.
-      selector:
-        device:
-          integration: spoolman
-
     rfid_tag_attribute:
       name: RFID Tag Attribute
       description: The attribute name of the RFID tag from the Spoolman integration.
@@ -64,8 +57,12 @@ action:
       ams_device_id: !input ams_device
       ams_trays: |
         {{ device_entities(ams_device_id)
-         | select('match', 'sensor.*_tray_*')
+         | select('match', '^sensor.*_tray_\d+$')
          | list }}
+      spoolman_spools: |
+        {{ integration_entities('spoolman')
+          | select('match', '^sensor.spoolman_spool_\d+$')
+          | list }}
       delay_seconds: !input delay_seconds
       printer_device_id: !input printer_device
       rfid_tag_attribute: !input rfid_tag_attribute
@@ -83,7 +80,7 @@ action:
             tag_uid: "{{ state_attr(current_tray_sensor, 'tag_uid') }}"
             matching_entity: >-
               {% set ns = namespace(entity=none) %}
-              {% for spool_entity in device_entities(spoolman_device_id) %}
+              {% for spool_entity in spoolman_spools %}
                 {% if tag_uid | string == state_attr(spool_entity, rfid_tag_attribute) | string %}
                   {% set ns.entity = spool_entity %}
                   {% break %}
