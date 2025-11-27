@@ -66,7 +66,6 @@ action:
       delay_seconds: !input delay_seconds
       printer_device_id: !input printer_device
       rfid_tag_attribute: !input rfid_tag_attribute
-      spoolman_device_id: !input spoolman_device
       weight_sensor: !input weight_sensor
   - delay: '{{ delay_seconds }}'
   - repeat:
