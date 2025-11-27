@@ -6,6 +6,7 @@ blueprint:
     **Version: 1.0.0**
 
     Turn smart plug lights on or off based on media player events.
+  source_url: https://github.com/owenvoke/home-assistant-blueprints/blob/main/automations/basic-smart-plug-media-lighting.yaml
   domain: automation
   input:
 
