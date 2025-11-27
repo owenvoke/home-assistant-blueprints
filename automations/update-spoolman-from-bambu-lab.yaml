@@ -3,7 +3,7 @@ blueprint:
   description: >
     # Update Spoolman from Bambu Lab
 
-    **Version: 2.0.0**
+    **Version: 2.0.1**
 
     Updates Spoolman entries for Bambu Lab filaments based on AMS tray usage.
   source_url: https://github.com/owenvoke/home-assistant-blueprints/blob/main/automations/update-spoolman-from-bambu-lab.yaml
@@ -58,7 +58,7 @@ action:
       ams_device_id: !input ams_device
       ams_trays: |
         {{ device_entities(ams_device_id)
-         | select('match', '^sensor.*_tray_\d+$')
+         | select('match', '^sensor\..*_tray_\d+$')
          | list }}
       spoolman_spools: |
         {{ integration_entities('spoolman')
